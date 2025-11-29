@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>예배 콘티 PDF 메이커 (가로형) - 여백 수정</title>
+    <!-- jsPDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- SortableJS for dragging list items -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Noto Sans KR', sans-serif; }
+        
+        /* A4 Landscape Ratio Preview */
+        .preview-page {
+            width: 100%;
+            aspect-ratio: 297 / 210; 
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            background: white;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Drag & Drop Styles */
+        .drag-active {
+            border-color: #2563eb !important;
+            background-color: #eff6ff !important;
+        }
+        
+        /* Sortable List Styles */
+        .sortable-ghost {
+            opacity: 0.4;
+            background-color: #f3f4f6;
+        }
+        .sortable-drag {
+            cursor: grabbing;
+        }
+        
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #ffffff;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Switch Toggle */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #2563eb;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #2563eb;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen py-8 px-4">
+
+    <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <!-- Left Panel: Controls -->
+        <div class="lg:col-span-1 space-y-6">
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h1 class="text-2xl font-bold text-gray-800 mb-4">콘티 제작 (여백 축소형)</h1>
+                
+                <!-- Inputs -->
+                <div class="space-y-4 mb-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">예배 날짜</label>
+                        <input type="text" id="dateInput" placeholder="예: 10/12" 
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none"
+                            oninput="updatePreview(true)">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">콘티 순서</label>
+                        <textarea id="orderInput" placeholder="곡 제목 > 곡 제목 > ..." rows="3"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                            oninput="updatePreview(true)"></textarea>
+                    </div>
+                </div>
+
+                <!-- Auto Crop Option -->
+                <div class="flex items-center justify-between mb-4 bg-gray-50 p-3 rounded-lg">
+                    <div>
+                        <span class="text-sm font-bold text-gray-700 block">여백 자동 제거</span>
+                        <span class="text-xs text-gray-500">흰 배경을 잘라내어 악보를 키웁니다.</span>
+                    </div>
+                    <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                        <input type="checkbox" name="autoCrop" id="autoCropToggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer" checked/>
+                        <label for="autoCropToggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                    </div>
+                </div>
+
+                <!-- Drop Zone -->
+                <div id="dropZone" class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center transition-colors cursor-pointer hover:bg-gray-50 mb-4 relative">
+                    <input type="file" id="fileInput" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept="image/*" multiple onchange="handleFileSelect(this.files)">
+                    <div class="pointer-events-none">
+                        <svg class="mx-auto h-10 w-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                        <p class="mt-2 text-sm text-gray-600">이미지를 드래그하거나<br>클릭하여 업로드</p>
+                    </div>
+                </div>
+                
+                <div id="processingIndicator" class="hidden text-center text-sm text-blue-600 mb-2 font-medium">
+                    이미지 처리 중... <span class="loader inline-block w-4 h-4 border-2 border-blue-600 border-t-transparent align-middle ml-1"></span>
+                </div>
+
+                <!-- File List (Sortable) -->
+                <div class="mb-6">
+                    <h3 class="text-sm font-medium text-gray-700 mb-2 flex justify-between">
+                        <span>파일 목록 (드래그하여 순서 변경)</span>
+                        <span id="fileCount" class="text-blue-600 text-xs">0개</span>
+                    </h3>
+                    <ul id="fileList" class="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                        <li class="text-sm text-gray-400 text-center py-4 bg-gray-50 rounded italic empty-msg">
+                            업로드된 파일이 없습니다.
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Generate Button -->
+                <button onclick="generatePDF()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition flex items-center justify-center gap-2 shadow-sm">
+                    <span id="btnText">PDF 다운로드</span>
+                    <div id="loadingSpinner" class="loader hidden"></div>
+                </button>
+            </div>
+        </div>
+
+        <!-- Right Panel: Preview -->
+        <div class="lg:col-span-2">
+            <div class="bg-white rounded-xl shadow-sm p-6 sticky top-6">
+                <div class="flex justify-between items-center mb-4 px-2 border-l-4 border-blue-500">
+                    <h2 class="text-lg font-bold text-gray-800">미리보기</h2>
+                    
+                    <!-- Pagination Controls -->
+                    <div class="flex items-center gap-2" id="paginationControls">
+                        <button onclick="changePage(-1)" class="p-1 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed" id="prevPageBtn" disabled>
+                            <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                        </button>
+                        <span class="text-sm font-medium text-gray-600 min-w-[80px] text-center" id="pageIndicator">Page 1 / 1</span>
+                        <button onclick="changePage(1)" class="p-1 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed" id="nextPageBtn" disabled>
+                            <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Preview Canvas Container -->
+                <div class="w-full bg-gray-200 p-4 rounded-lg flex justify-center items-center">
+                    <div id="previewContainer" class="preview-page relative bg-white">
+                        <!-- Header Area (Simulated) -->
+                        <div class="absolute top-0 left-0 w-full h-[8%] border-b-2 border-gray-800 flex text-sm">
+                            <div class="w-[15%] border-r border-gray-400 flex items-center justify-center font-bold text-gray-800 p-2 text-center break-words" id="prevDate">
+                                날짜
+                            </div>
+                            <div class="w-[85%] flex items-center px-4 text-gray-700 font-medium whitespace-pre-wrap leading-tight overflow-hidden" id="prevOrder">
+                                콘티 순서
+                            </div>
+                        </div>
+
+                        <!-- Content Area -->
+                        <div class="absolute top-[8%] left-0 w-full h-[92%] flex">
+                            <!-- Left Page -->
+                            <div class="w-1/2 h-full border-r border-gray-400 p-4 flex items-center justify-center relative">
+                                <img id="prevImg1" src="" class="max-w-full max-h-full object-contain hidden z-10">
+                                <span id="prevPlaceholder1" class="text-gray-300 text-4xl font-bold absolute">L</span>
+                            </div>
+                            <!-- Right Page -->
+                            <div class="w-1/2 h-full p-4 flex items-center justify-center relative">
+                                <img id="prevImg2" src="" class="max-w-full max-h-full object-contain hidden z-10">
+                                <span id="prevPlaceholder2" class="text-gray-300 text-4xl font-bold absolute">R</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-center text-xs text-gray-500 mt-2">* 이미지가 자동으로 잘려 악보가 더 크게 표시됩니다.</p>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const { jsPDF } = window.jspdf;
+        
+        // State
+        let filesData = []; // Array of objects: { id, file, dataUrl, name }
+        let currentPage = 1;
+        let totalPages = 1;
+        
+        // Initialize Sortable
+        const fileListEl = document.getElementById('fileList');
+        new Sortable(fileListEl, {
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            handle: '.drag-handle', // Handle specifically for dragging
+            onEnd: function (evt) {
+                // Reorder filesData array based on new DOM order
+                const newOrder = [];
+                const items = fileListEl.querySelectorAll('li[data-id]');
+                items.forEach(item => {
+                    const id = item.getAttribute('data-id');
+                    const fileObj = filesData.find(f => f.id === id);
+                    if(fileObj) newOrder.push(fileObj);
+                });
+                filesData = newOrder;
+                // Reset to page 1 after reorder to avoid confusion
+                currentPage = 1;
+                updatePreview();
+            }
+        });
+
+        // Drag & Drop Handling for Upload
+        const dropZone = document.getElementById('dropZone');
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight(e) { dropZone.classList.add('drag-active'); }
+        function unhighlight(e) { dropZone.classList.remove('drag-active'); }
+
+        dropZone.addEventListener('drop', handleDrop, false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleFileSelect(files);
+        }
+
+        // --- CORE: Auto Crop Logic ---
+        function cropImage(dataUrl) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+                    
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const data = imageData.data;
+                    const w = canvas.width;
+                    const h = canvas.height;
+                    
+                    // Thresold for "White" (0-255). 
+                    // Pixels lighter than this are considered background.
+                    const threshold = 240; 
+
+                    let top = null, bottom = null, left = null, right = null;
+                    
+                    // Scan for Top
+                    for (let y = 0; y < h; y++) {
+                        for (let x = 0; x < w; x++) {
+                            const idx = (y * w + x) * 4;
+                            // If pixel is NOT white/transparent
+                            if (data[idx] < threshold || data[idx+1] < threshold || data[idx+2] < threshold || data[idx+3] < 10) {
+                                top = y;
+                                break;
+                            }
+                        }
+                        if (top !== null) break;
+                    }
+
+                    // If image is blank (all white)
+                    if (top === null) {
+                        resolve(dataUrl); 
+                        return;
+                    }
+
+                    // Scan for Bottom
+                    for (let y = h - 1; y >= 0; y--) {
+                        for (let x = 0; x < w; x++) {
+                            const idx = (y * w + x) * 4;
+                            if (data[idx] < threshold || data[idx+1] < threshold || data[idx+2] < threshold) {
+                                bottom = y;
+                                break;
+                            }
+                        }
+                        if (bottom !== null) break;
+                    }
+
+                    // Scan for Left
+                    for (let x = 0; x < w; x++) {
+                        for (let y = top; y <= bottom; y++) {
+                            const idx = (y * w + x) * 4;
+                            if (data[idx] < threshold || data[idx+1] < threshold || data[idx+2] < threshold) {
+                                left = x;
+                                break;
+                            }
+                        }
+                        if (left !== null) break;
+                    }
+
+                    // Scan for Right
+                    for (let x = w - 1; x >= 0; x--) {
+                        for (let y = top; y <= bottom; y++) {
+                            const idx = (y * w + x) * 4;
+                            if (data[idx] < threshold || data[idx+1] < threshold || data[idx+2] < threshold) {
+                                right = x;
+                                break;
+                            }
+                        }
+                        if (right !== null) break;
+                    }
+
+                    // Add Padding (optional)
+                    const padding = 10;
+                    top = Math.max(0, top - padding);
+                    bottom = Math.min(h, bottom + padding);
+                    left = Math.max(0, left - padding);
+                    right = Math.min(w, right + padding);
+
+                    const cropW = right - left;
+                    const cropH = bottom - top;
+
+                    if (cropW <= 0 || cropH <= 0) {
+                        resolve(dataUrl);
+                        return;
+                    }
+
+                    const cropCanvas = document.createElement('canvas');
+                    cropCanvas.width = cropW;
+                    cropCanvas.height = cropH;
+                    const cropCtx = cropCanvas.getContext('2d');
+                    cropCtx.drawImage(canvas, left, top, cropW, cropH, 0, 0, cropW, cropH);
+                    
+                    // Return as JPEG to save size (removing alpha channel which sheet music usually doesn't need)
+                    resolve(cropCanvas.toDataURL('image/jpeg', 0.95));
+                };
+                img.onerror = () => resolve(dataUrl); // Fallback
+                img.src = dataUrl;
+            });
+        }
+
+
+        // File Processing
+        async function handleFileSelect(files) {
+            if (!files.length) return;
+            
+            const processingDiv = document.getElementById('processingIndicator');
+            processingDiv.classList.remove('hidden');
+
+            const isAutoCrop = document.getElementById('autoCropToggle').checked;
+
+            // Remove empty message if exists
+            const emptyMsg = document.querySelector('.empty-msg');
+            if(emptyMsg) emptyMsg.remove();
+
+            const fileArray = Array.from(files);
+
+            for (const file of fileArray) {
+                if (!file.type.startsWith('image/')) continue;
+
+                await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = async (e) => {
+                        const originalDataUrl = e.target.result;
+                        let finalDataUrl = originalDataUrl;
+
+                        if (isAutoCrop) {
+                            finalDataUrl = await cropImage(originalDataUrl);
+                        }
+
+                        const id = Math.random().toString(36).substr(2, 9);
+                        const fileObj = {
+                            id: id,
+                            file: file,
+                            dataUrl: finalDataUrl,
+                            name: file.name
+                        };
+                        filesData.push(fileObj);
+                        addFileToUI(fileObj);
+                        resolve();
+                    };
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            // Update UI after all processing
+            processingDiv.classList.add('hidden');
+            updatePaginationState();
+            if(filesData.length <= 2) {
+                currentPage = 1;
+            }
+            updatePreview();
+            updateCount();
+        }
+
+        function addFileToUI(fileObj) {
+            const li = document.createElement('li');
+            li.className = "bg-white border border-gray-200 rounded p-2 flex items-center gap-3 shadow-sm select-none cursor-grab active:cursor-grabbing";
+            li.setAttribute('data-id', fileObj.id);
+            li.innerHTML = `
+                <div class="drag-handle text-gray-400 cursor-grab px-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                </div>
+                <img src="${fileObj.dataUrl}" class="w-10 h-10 object-cover rounded bg-gray-100">
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-gray-700 truncate">${fileObj.name}</p>
+                </div>
+                <button onclick="removeFile('${fileObj.id}')" class="text-red-400 hover:text-red-600 p-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            `;
+            document.getElementById('fileList').appendChild(li);
+        }
+
+        function removeFile(id) {
+            filesData = filesData.filter(f => f.id !== id);
+            const item = document.querySelector(`li[data-id="${id}"]`);
+            if(item) item.remove();
+            
+            if(filesData.length === 0) {
+                const ul = document.getElementById('fileList');
+                ul.innerHTML = '<li class="text-sm text-gray-400 text-center py-4 bg-gray-50 rounded italic empty-msg">업로드된 파일이 없습니다.</li>';
+                currentPage = 1;
+            } else {
+                // Adjust current page if we deleted the last items on the current page
+                const maxPage = Math.ceil(filesData.length / 2);
+                if (currentPage > maxPage) currentPage = maxPage || 1;
+            }
+            
+            updateCount();
+            updatePreview();
+        }
+
+        function updateCount() {
+            document.getElementById('fileCount').textContent = `${filesData.length}개`;
+        }
+
+        // Pagination Logic
+        function updatePaginationState() {
+            totalPages = Math.ceil(filesData.length / 2) || 1;
+            document.getElementById('pageIndicator').textContent = `Page ${currentPage} / ${totalPages}`;
+            
+            document.getElementById('prevPageBtn').disabled = currentPage <= 1;
+            document.getElementById('nextPageBtn').disabled = currentPage >= totalPages;
+        }
+
+        function changePage(delta) {
+            const newPage = currentPage + delta;
+            if (newPage >= 1 && newPage <= totalPages) {
+                currentPage = newPage;
+                updatePreview();
+            }
+        }
+
+        // Preview Logic
+        function updatePreview(keepPage = false) {
+            // Recalculate pages
+            totalPages = Math.ceil(filesData.length / 2) || 1;
+            if (!keepPage && currentPage > totalPages) currentPage = totalPages;
+            if (currentPage < 1) currentPage = 1;
+
+            updatePaginationState();
+
+            const dateText = document.getElementById('dateInput').value || '날짜';
+            const orderText = document.getElementById('orderInput').value || '콘티 순서';
+
+            document.getElementById('prevDate').textContent = dateText;
+            document.getElementById('prevOrder').textContent = orderText;
+
+            // Calculate indexes for current page
+            // Page 1: 0, 1
+            // Page 2: 2, 3
+            const startIndex = (currentPage - 1) * 2;
+            const leftData = filesData[startIndex];
+            const rightData = filesData[startIndex + 1];
+
+            // Image 1 (Left)
+            const img1 = document.getElementById('prevImg1');
+            const ph1 = document.getElementById('prevPlaceholder1');
+            
+            if (leftData) {
+                img1.src = leftData.dataUrl;
+                img1.classList.remove('hidden');
+                ph1.classList.add('hidden');
+            } else {
+                img1.classList.add('hidden');
+                ph1.classList.remove('hidden');
+                ph1.textContent = startIndex + 1;
+            }
+
+            // Image 2 (Right)
+            const img2 = document.getElementById('prevImg2');
+            const ph2 = document.getElementById('prevPlaceholder2');
+            
+            if (rightData) {
+                img2.src = rightData.dataUrl;
+                img2.classList.remove('hidden');
+                ph2.classList.add('hidden');
+            } else {
+                img2.classList.add('hidden');
+                ph2.classList.remove('hidden');
+                ph2.textContent = startIndex + 2;
+            }
+        }
+
+        // PDF Generation
+        async function generatePDF() {
+            if (filesData.length === 0) {
+                alert("먼저 악보 이미지를 업로드해주세요.");
+                return;
+            }
+
+            const btn = document.querySelector('button');
+            const btnText = document.getElementById('btnText');
+            const spinner = document.getElementById('loadingSpinner');
+
+            btn.disabled = true;
+            btnText.textContent = "최적화 및 생성 중...";
+            spinner.classList.remove('hidden');
+
+            await new Promise(resolve => setTimeout(resolve, 100)); // UI update delay
+
+            try {
+                // A4 Landscape: 297mm x 210mm
+                const doc = new jsPDF({
+                    orientation: 'l',
+                    unit: 'mm',
+                    format: 'a4'
+                });
+
+                const dateText = document.getElementById('dateInput').value;
+                const orderText = document.getElementById('orderInput').value;
+                
+                const pageWidth = 297;
+                const pageHeight = 210;
+                
+                // === 여백 설정 수정 (최상단 여백 줄이기) ===
+                const marginLeft = 10;
+                const marginTop = 5;  // 기존 10에서 5로 축소 (요청사항 반영)
+                const marginBottom = 10;
+                
+                const headerHeight = 15; // Header area height
+                
+                // Helper: Create Header Image via Canvas (to support Korean fonts)
+                const createHeaderImage = () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    const scale = 3; // High res
+                    // Width is determined by Left/Right margins
+                    const w = (pageWidth - marginLeft * 2) * 3.78 * scale; // mm to px
+                    const h = headerHeight * 3.78 * scale;
+                    
+                    canvas.width = w;
+                    canvas.height = h;
+
+                    // Background & Border
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, w, h);
+                    ctx.strokeStyle = '#000000';
+                    ctx.lineWidth = 1 * scale;
+                    ctx.strokeRect(0, 0, w, h);
+
+                    // Vertical Line dividing Date and Order
+                    const dateWidthPercent = 0.15; // 15% for Date
+                    const lineX = w * dateWidthPercent;
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(lineX, 0);
+                    ctx.lineTo(lineX, h);
+                    ctx.stroke();
+
+                    // Text Settings
+                    ctx.textBaseline = 'middle';
+                    ctx.fillStyle = '#000000';
+                    const fontSize = 14 * scale; 
+                    ctx.font = `${fontSize}px "Noto Sans KR", sans-serif`;
+
+                    // Draw Date (Center aligned in its box)
+                    ctx.textAlign = 'center';
+                    ctx.fillText(dateText, lineX / 2, h / 2);
+
+                    // Draw Order (Left aligned with padding)
+                    ctx.textAlign = 'left';
+                    const padding = 10 * scale;
+                    ctx.fillText(orderText, lineX + padding, h / 2);
+
+                    return canvas.toDataURL('image/png'); // PNG for header is fine (text is sharp)
+                };
+
+                const headerImgData = createHeaderImage();
+
+                // Process Images in pairs (2 per page)
+                for (let i = 0; i < filesData.length; i += 2) {
+                    if (i > 0) doc.addPage();
+
+                    // 1. Draw Header
+                    // Use new marginTop here
+                    doc.addImage(headerImgData, 'PNG', marginLeft, marginTop, pageWidth - (marginLeft * 2), headerHeight);
+
+                    // 2. Draw Divider Line (Middle of page content)
+                    const contentTop = marginTop + headerHeight + 2; // +2mm padding
+                    const contentHeight = pageHeight - marginBottom - contentTop; // Use marginBottom
+                    const centerX = pageWidth / 2;
+                    
+                    doc.setLineWidth(0.1);
+                    doc.setDrawColor(150); // Light gray line
+                    doc.line(centerX, contentTop, centerX, pageHeight - marginBottom);
+
+                    // 3. Draw Images
+                    const drawImage = (fileData, isLeft) => {
+                        const imgProps = doc.getImageProperties(fileData.dataUrl);
+                        
+                        // Calculated slot size for one image
+                        const slotWidth = (pageWidth - (marginLeft * 2)) / 2 - 2; // -2 for padding near divider
+                        const slotHeight = contentHeight;
+
+                        // Calculate aspect ratio fit
+                        const ratio = Math.min(slotWidth / imgProps.width, slotHeight / imgProps.height);
+                        const finalW = imgProps.width * ratio;
+                        const finalH = imgProps.height * ratio;
+
+                        // Position centering
+                        let xPos;
+                        if (isLeft) {
+                            // Left Slot center: margin + (slotWidth/2)
+                            // Image start: Center - (finalW/2)
+                            const slotCenter = marginLeft + (slotWidth / 2); 
+                            xPos = slotCenter - (finalW / 2);
+                        } else {
+                            // Right Slot center: centerX + (slotWidth/2) + padding
+                            const slotCenter = centerX + (slotWidth / 2) + 1;
+                            xPos = slotCenter - (finalW / 2);
+                        }
+                        
+                        // Y Position centering
+                        const yPos = contentTop + (slotHeight - finalH) / 2;
+
+                        // OPTIMIZATION: Use 'JPEG' format and 'FAST' compression
+                        doc.addImage(fileData.dataUrl, 'JPEG', xPos, yPos, finalW, finalH, null, 'FAST');
+                    };
+
+                    // Left Image (Current index)
+                    if (filesData[i]) {
+                        drawImage(filesData[i], true);
+                    }
+
+                    // Right Image (Next index)
+                    if (filesData[i+1]) {
+                        drawImage(filesData[i+1], false);
+                    }
+                }
+
+                // Save
+                // 사용자가 입력한 날짜를 그대로 파일명에 반영 (예: 11/30 콘티.pdf)
+                const fileName = dateText ? `${dateText} 콘티.pdf` : '콘티.pdf';
+                doc.save(fileName);
+
+            } catch (e) {
+                console.error(e);
+                alert('PDF 생성 중 오류가 발생했습니다.');
+            } finally {
+                btn.disabled = false;
+                btnText.textContent = "PDF 다운로드";
+                spinner.classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
