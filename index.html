@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,12 +14,14 @@
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Noto Sans KR', sans-serif; }
-        
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+        }
+
         /* A4 Landscape Ratio Preview */
         .preview-page {
             width: 100%;
-            aspect-ratio: 297 / 210; 
+            aspect-ratio: 297 / 210;
             border: 1px solid #e5e7eb;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             background: white;
@@ -33,16 +36,17 @@
             border-color: #2563eb !important;
             background-color: #eff6ff !important;
         }
-        
+
         /* Sortable List Styles */
         .sortable-ghost {
             opacity: 0.4;
             background-color: #f3f4f6;
         }
+
         .sortable-drag {
             cursor: grabbing;
         }
-        
+
         .loader {
             border: 3px solid #f3f3f3;
             border-top: 3px solid #ffffff;
@@ -51,40 +55,69 @@
             height: 20px;
             animation: spin 1s linear infinite;
         }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
 
         /* Switch Toggle */
         .toggle-checkbox:checked {
             right: 0;
             border-color: #2563eb;
         }
-        .toggle-checkbox:checked + .toggle-label {
+
+        .toggle-checkbox:checked+.toggle-label {
             background-color: #2563eb;
         }
     </style>
 </head>
+
 <body class="bg-gray-100 min-h-screen py-8 px-4">
 
     <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
+
         <!-- Left Panel: Controls -->
         <div class="lg:col-span-1 space-y-6">
             <div class="bg-white rounded-xl shadow-sm p-6">
                 <h1 class="text-2xl font-bold text-gray-800 mb-4">콘티 제작 (여백 축소형)</h1>
-                
+
                 <!-- Inputs -->
                 <div class="space-y-4 mb-6">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">예배 날짜</label>
-                        <input type="text" id="dateInput" placeholder="예: 10/12" 
+                        <input type="text" id="dateInput" placeholder="예: 10/12"
                             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none"
                             oninput="updatePreview(true)">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">콘티 순서</label>
-                        <textarea id="orderInput" placeholder="곡 제목 > 곡 제목 > ..." rows="3"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none resize-none"
-                            oninput="updatePreview(true)"></textarea>
+                        <!-- New Input Area -->
+                        <div class="flex gap-2 mb-2">
+                            <input type="text" id="newSongInput" placeholder="곡 제목 입력"
+                                class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none"
+                                onkeypress="handleSongInputKey(event)">
+                            <button onclick="addSong()"
+                                class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 4v16m8-8H4"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <!-- Song List -->
+                        <ul id="songList"
+                            class="space-y-2 max-h-[200px] overflow-y-auto pr-1 border border-gray-200 rounded-md p-2 bg-gray-50 min-h-[100px]">
+                            <li class="text-sm text-gray-400 text-center py-2 italic empty-songs-msg">
+                                곡을 추가해주세요.
+                            </li>
+                        </ul>
+                        <!-- Hidden input to store joined string for compatibility if needed, or just use JS var -->
                     </div>
                 </div>
 
@@ -94,25 +127,34 @@
                         <span class="text-sm font-bold text-gray-700 block">여백 자동 제거</span>
                         <span class="text-xs text-gray-500">흰 배경을 잘라내어 악보를 키웁니다.</span>
                     </div>
-                    <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
-                        <input type="checkbox" name="autoCrop" id="autoCropToggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer" checked/>
-                        <label for="autoCropToggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                    <div
+                        class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                        <input type="checkbox" name="autoCrop" id="autoCropToggle"
+                            class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"
+                            checked />
+                        <label for="autoCropToggle"
+                            class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
                     </div>
                 </div>
 
                 <!-- Drop Zone -->
-                <div id="dropZone" class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center transition-colors cursor-pointer hover:bg-gray-50 mb-4 relative">
-                    <input type="file" id="fileInput" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept="image/*" multiple onchange="handleFileSelect(this.files)">
+                <div id="dropZone"
+                    class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center transition-colors cursor-pointer hover:bg-gray-50 mb-4 relative">
+                    <input type="file" id="fileInput" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        accept="image/*" multiple onchange="handleFileSelect(this.files)">
                     <div class="pointer-events-none">
-                        <svg class="mx-auto h-10 w-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        <svg class="mx-auto h-10 w-10 text-gray-400" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                         </svg>
                         <p class="mt-2 text-sm text-gray-600">이미지를 드래그하거나<br>클릭하여 업로드</p>
                     </div>
                 </div>
-                
+
                 <div id="processingIndicator" class="hidden text-center text-sm text-blue-600 mb-2 font-medium">
-                    이미지 처리 중... <span class="loader inline-block w-4 h-4 border-2 border-blue-600 border-t-transparent align-middle ml-1"></span>
+                    이미지 처리 중... <span
+                        class="loader inline-block w-4 h-4 border-2 border-blue-600 border-t-transparent align-middle ml-1"></span>
                 </div>
 
                 <!-- File List (Sortable) -->
@@ -129,7 +171,8 @@
                 </div>
 
                 <!-- Generate Button -->
-                <button onclick="generatePDF()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition flex items-center justify-center gap-2 shadow-sm">
+                <button onclick="generatePDF()"
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition flex items-center justify-center gap-2 shadow-sm">
                     <span id="btnText">PDF 다운로드</span>
                     <div id="loadingSpinner" class="loader hidden"></div>
                 </button>
@@ -141,28 +184,41 @@
             <div class="bg-white rounded-xl shadow-sm p-6 sticky top-6">
                 <div class="flex justify-between items-center mb-4 px-2 border-l-4 border-blue-500">
                     <h2 class="text-lg font-bold text-gray-800">미리보기</h2>
-                    
+
                     <!-- Pagination Controls -->
                     <div class="flex items-center gap-2" id="paginationControls">
-                        <button onclick="changePage(-1)" class="p-1 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed" id="prevPageBtn" disabled>
-                            <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                        <button onclick="changePage(-1)"
+                            class="p-1 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                            id="prevPageBtn" disabled>
+                            <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M15 19l-7-7 7-7"></path>
+                            </svg>
                         </button>
-                        <span class="text-sm font-medium text-gray-600 min-w-[80px] text-center" id="pageIndicator">Page 1 / 1</span>
-                        <button onclick="changePage(1)" class="p-1 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed" id="nextPageBtn" disabled>
-                            <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                        <span class="text-sm font-medium text-gray-600 min-w-[80px] text-center" id="pageIndicator">Page
+                            1 / 1</span>
+                        <button onclick="changePage(1)"
+                            class="p-1 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                            id="nextPageBtn" disabled>
+                            <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7">
+                                </path>
+                            </svg>
                         </button>
                     </div>
                 </div>
-                
+
                 <!-- Preview Canvas Container -->
                 <div class="w-full bg-gray-200 p-4 rounded-lg flex justify-center items-center">
                     <div id="previewContainer" class="preview-page relative bg-white">
                         <!-- Header Area (Simulated) -->
                         <div class="absolute top-0 left-0 w-full h-[8%] border-b-2 border-gray-800 flex text-sm">
-                            <div class="w-[15%] border-r border-gray-400 flex items-center justify-center font-bold text-gray-800 p-2 text-center break-words" id="prevDate">
+                            <div class="w-[15%] border-r border-gray-400 flex items-center justify-center font-bold text-gray-800 p-2 text-center break-words"
+                                id="prevDate">
                                 날짜
                             </div>
-                            <div class="w-[85%] flex items-center px-4 text-gray-700 font-medium whitespace-pre-wrap leading-tight overflow-hidden" id="prevOrder">
+                            <div class="w-[85%] flex items-center px-4 text-gray-700 font-medium whitespace-pre-wrap leading-tight overflow-hidden"
+                                id="prevOrder">
                                 콘티 순서
                             </div>
                         </div>
@@ -170,14 +226,25 @@
                         <!-- Content Area -->
                         <div class="absolute top-[8%] left-0 w-full h-[92%] flex">
                             <!-- Left Page -->
-                            <div class="w-1/2 h-full border-r border-gray-400 p-4 flex items-center justify-center relative">
-                                <img id="prevImg1" src="" class="max-w-full max-h-full object-contain hidden z-10">
-                                <span id="prevPlaceholder1" class="text-gray-300 text-4xl font-bold absolute">L</span>
+                            <div
+                                class="w-1/2 h-full border-r border-gray-400 p-4 flex flex-col items-center justify-start relative">
+                                <div id="prevHeader1"
+                                    class="w-full text-left font-bold text-gray-800 mb-2 h-[20px] text-lg pl-1"></div>
+                                <div class="relative flex-1 w-full flex items-center justify-center overflow-hidden">
+                                    <img id="prevImg1" src="" class="max-w-full max-h-full object-contain hidden z-10">
+                                    <span id="prevPlaceholder1"
+                                        class="text-gray-300 text-4xl font-bold absolute">L</span>
+                                </div>
                             </div>
                             <!-- Right Page -->
-                            <div class="w-1/2 h-full p-4 flex items-center justify-center relative">
-                                <img id="prevImg2" src="" class="max-w-full max-h-full object-contain hidden z-10">
-                                <span id="prevPlaceholder2" class="text-gray-300 text-4xl font-bold absolute">R</span>
+                            <div class="w-1/2 h-full p-4 flex flex-col items-center justify-start relative">
+                                <div id="prevHeader2"
+                                    class="w-full text-left font-bold text-gray-800 mb-2 h-[20px] text-lg pl-1"></div>
+                                <div class="relative flex-1 w-full flex items-center justify-center overflow-hidden">
+                                    <img id="prevImg2" src="" class="max-w-full max-h-full object-contain hidden z-10">
+                                    <span id="prevPlaceholder2"
+                                        class="text-gray-300 text-4xl font-bold absolute">R</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -190,13 +257,14 @@
 
     <script>
         const { jsPDF } = window.jspdf;
-        
+
         // State
         let filesData = []; // Array of objects: { id, file, dataUrl, name }
+        let songs = []; // Array of objects: { id, text }
         let currentPage = 1;
         let totalPages = 1;
-        
-        // Initialize Sortable
+
+        // Initialize Sortable for Files
         const fileListEl = document.getElementById('fileList');
         new Sortable(fileListEl, {
             animation: 150,
@@ -209,7 +277,7 @@
                 items.forEach(item => {
                     const id = item.getAttribute('data-id');
                     const fileObj = filesData.find(f => f.id === id);
-                    if(fileObj) newOrder.push(fileObj);
+                    if (fileObj) newOrder.push(fileObj);
                 });
                 filesData = newOrder;
                 // Reset to page 1 after reorder to avoid confusion
@@ -217,6 +285,141 @@
                 updatePreview();
             }
         });
+
+        // Initialize Sortable for Songs
+        const songListEl = document.getElementById('songList');
+        new Sortable(songListEl, {
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            handle: '.song-drag-handle',
+            onEnd: function (evt) {
+                // Reorder songs array
+                const newOrder = [];
+                const items = songListEl.querySelectorAll('li[data-id]');
+                items.forEach(item => {
+                    const id = item.getAttribute('data-id');
+                    const songObj = songs.find(s => s.id === id);
+                    if (songObj) newOrder.push(songObj);
+                });
+                songs = newOrder;
+                updatePreview();
+            }
+        });
+
+        // --- Song List Logic ---
+        function handleSongInputKey(e) {
+            if (e.key === 'Enter') {
+                addSong();
+            }
+        }
+
+        function addSong() {
+            const input = document.getElementById('newSongInput');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const id = Math.random().toString(36).substr(2, 9);
+            // Default form is empty string
+            const songObj = { id, text, form: '' };
+            songs.push(songObj);
+
+            // UI Add
+            addSongToUI(songObj);
+
+            // Clear input & focus
+            input.value = '';
+            input.focus();
+
+            // Remove empty msg
+            const emptyMsg = document.querySelector('.empty-songs-msg');
+            if (emptyMsg) emptyMsg.remove();
+
+            updatePreview();
+        }
+
+        function addSongToUI(songObj) {
+            const li = document.createElement('li');
+            li.className = "bg-white border border-gray-200 rounded p-2 flex items-center gap-3 shadow-sm select-none";
+            li.setAttribute('data-id', songObj.id);
+
+            // Buttons map
+            const formBtns = [
+                { label: 'I', val: 'I' },
+                { label: 'V', val: 'V' },
+                { label: 'P', val: 'P' },
+                { label: 'C', val: 'C' },
+                { label: 'B', val: 'B' },
+                { label: 'IL', val: 'IL' },
+                { label: 'O', val: 'O' },
+            ];
+
+            // Create buttons HTML
+            let btnsHtml = formBtns.map(btn =>
+                `<button onclick="addForm('${songObj.id}', '${btn.val}')" class="text-[10px] bg-gray-100 hover:bg-gray-200 px-1.5 py-0.5 rounded border border-gray-300 text-gray-700 transition-colors">${btn.label}</button>`
+            ).join('');
+
+            li.innerHTML = `
+                <div class="song-drag-handle text-gray-400 cursor-grab px-1 hover:text-gray-600 flex-shrink-0">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                </div>
+                <div class="flex-1 min-w-0 flex flex-col gap-1">
+                    <p class="text-sm font-medium text-gray-800 break-words leading-tight">
+                        ${songObj.text} 
+                        <span class="text-blue-600 font-bold ml-1 text-xs" id="form-display-${songObj.id}">${songObj.form ? `[${songObj.form}]` : ''}</span>
+                    </p>
+                    <div class="flex gap-1 flex-wrap items-center">
+                        ${btnsHtml}
+                        <button onclick="clearForm('${songObj.id}')" class="text-[10px] text-red-400 hover:text-red-600 ml-1 underline decoration-auto">Reset</button>
+                    </div>
+                </div>
+                <button onclick="removeSong('${songObj.id}')" class="text-gray-400 hover:text-red-500 p-1 transition-colors flex-shrink-0">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg>
+                </button>
+            `;
+            document.getElementById('songList').appendChild(li);
+        }
+
+        function addForm(id, type) {
+            const song = songs.find(s => s.id === id);
+            if (!song) return;
+
+            if (song.form) {
+                song.form += '-' + type;
+            } else {
+                song.form = type;
+            }
+
+            // Update UI Span
+            const span = document.getElementById(`form-display-${id}`);
+            if (span) span.textContent = `[${song.form}]`;
+
+            updatePreview();
+        }
+
+        function clearForm(id) {
+            const song = songs.find(s => s.id === id);
+            if (!song) return;
+
+            song.form = '';
+
+            // Update UI Span
+            const span = document.getElementById(`form-display-${id}`);
+            if (span) span.textContent = ''; // Hide or empty
+
+            updatePreview();
+        }
+
+        function removeSong(id) {
+            songs = songs.filter(s => s.id !== id);
+            const item = document.querySelector(`#songList li[data-id="${id}"]`);
+            if (item) item.remove();
+
+            if (songs.length === 0) {
+                const ul = document.getElementById('songList');
+                ul.innerHTML = '<li class="text-sm text-gray-400 text-center py-2 italic empty-songs-msg">곡을 추가해주세요.</li>';
+            }
+            updatePreview();
+        }
 
         // Drag & Drop Handling for Upload
         const dropZone = document.getElementById('dropZone');
@@ -259,24 +462,24 @@
                     canvas.height = img.height;
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0);
-                    
+
                     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
                     const data = imageData.data;
                     const w = canvas.width;
                     const h = canvas.height;
-                    
+
                     // Thresold for "White" (0-255). 
                     // Pixels lighter than this are considered background.
-                    const threshold = 240; 
+                    const threshold = 240;
 
                     let top = null, bottom = null, left = null, right = null;
-                    
+
                     // Scan for Top
                     for (let y = 0; y < h; y++) {
                         for (let x = 0; x < w; x++) {
                             const idx = (y * w + x) * 4;
                             // If pixel is NOT white/transparent
-                            if (data[idx] < threshold || data[idx+1] < threshold || data[idx+2] < threshold || data[idx+3] < 10) {
+                            if (data[idx] < threshold || data[idx + 1] < threshold || data[idx + 2] < threshold || data[idx + 3] < 10) {
                                 top = y;
                                 break;
                             }
@@ -286,7 +489,7 @@
 
                     // If image is blank (all white)
                     if (top === null) {
-                        resolve(dataUrl); 
+                        resolve(dataUrl);
                         return;
                     }
 
@@ -294,7 +497,7 @@
                     for (let y = h - 1; y >= 0; y--) {
                         for (let x = 0; x < w; x++) {
                             const idx = (y * w + x) * 4;
-                            if (data[idx] < threshold || data[idx+1] < threshold || data[idx+2] < threshold) {
+                            if (data[idx] < threshold || data[idx + 1] < threshold || data[idx + 2] < threshold) {
                                 bottom = y;
                                 break;
                             }
@@ -306,7 +509,7 @@
                     for (let x = 0; x < w; x++) {
                         for (let y = top; y <= bottom; y++) {
                             const idx = (y * w + x) * 4;
-                            if (data[idx] < threshold || data[idx+1] < threshold || data[idx+2] < threshold) {
+                            if (data[idx] < threshold || data[idx + 1] < threshold || data[idx + 2] < threshold) {
                                 left = x;
                                 break;
                             }
@@ -318,7 +521,7 @@
                     for (let x = w - 1; x >= 0; x--) {
                         for (let y = top; y <= bottom; y++) {
                             const idx = (y * w + x) * 4;
-                            if (data[idx] < threshold || data[idx+1] < threshold || data[idx+2] < threshold) {
+                            if (data[idx] < threshold || data[idx + 1] < threshold || data[idx + 2] < threshold) {
                                 right = x;
                                 break;
                             }
@@ -346,7 +549,7 @@
                     cropCanvas.height = cropH;
                     const cropCtx = cropCanvas.getContext('2d');
                     cropCtx.drawImage(canvas, left, top, cropW, cropH, 0, 0, cropW, cropH);
-                    
+
                     // Return as JPEG to save size (removing alpha channel which sheet music usually doesn't need)
                     resolve(cropCanvas.toDataURL('image/jpeg', 0.95));
                 };
@@ -359,7 +562,7 @@
         // File Processing
         async function handleFileSelect(files) {
             if (!files.length) return;
-            
+
             const processingDiv = document.getElementById('processingIndicator');
             processingDiv.classList.remove('hidden');
 
@@ -367,7 +570,7 @@
 
             // Remove empty message if exists
             const emptyMsg = document.querySelector('.empty-msg');
-            if(emptyMsg) emptyMsg.remove();
+            if (emptyMsg) emptyMsg.remove();
 
             const fileArray = Array.from(files);
 
@@ -402,7 +605,7 @@
             // Update UI after all processing
             processingDiv.classList.add('hidden');
             updatePaginationState();
-            if(filesData.length <= 2) {
+            if (filesData.length <= 2) {
                 currentPage = 1;
             }
             updatePreview();
@@ -431,9 +634,9 @@
         function removeFile(id) {
             filesData = filesData.filter(f => f.id !== id);
             const item = document.querySelector(`li[data-id="${id}"]`);
-            if(item) item.remove();
-            
-            if(filesData.length === 0) {
+            if (item) item.remove();
+
+            if (filesData.length === 0) {
                 const ul = document.getElementById('fileList');
                 ul.innerHTML = '<li class="text-sm text-gray-400 text-center py-4 bg-gray-50 rounded italic empty-msg">업로드된 파일이 없습니다.</li>';
                 currentPage = 1;
@@ -442,7 +645,7 @@
                 const maxPage = Math.ceil(filesData.length / 2);
                 if (currentPage > maxPage) currentPage = maxPage || 1;
             }
-            
+
             updateCount();
             updatePreview();
         }
@@ -455,7 +658,7 @@
         function updatePaginationState() {
             totalPages = Math.ceil(filesData.length / 2) || 1;
             document.getElementById('pageIndicator').textContent = `Page ${currentPage} / ${totalPages}`;
-            
+
             document.getElementById('prevPageBtn').disabled = currentPage <= 1;
             document.getElementById('nextPageBtn').disabled = currentPage >= totalPages;
         }
@@ -478,7 +681,10 @@
             updatePaginationState();
 
             const dateText = document.getElementById('dateInput').value || '날짜';
-            const orderText = document.getElementById('orderInput').value || '콘티 순서';
+            // NEW: Get order text from songs array with Form info
+            const orderText = songs.length > 0
+                ? songs.map(s => s.text + (s.form ? ` [${s.form}]` : '')).join(' > ')
+                : '콘티 순서';
 
             document.getElementById('prevDate').textContent = dateText;
             document.getElementById('prevOrder').textContent = orderText;
@@ -493,7 +699,7 @@
             // Image 1 (Left)
             const img1 = document.getElementById('prevImg1');
             const ph1 = document.getElementById('prevPlaceholder1');
-            
+
             if (leftData) {
                 img1.src = leftData.dataUrl;
                 img1.classList.remove('hidden');
@@ -507,7 +713,7 @@
             // Image 2 (Right)
             const img2 = document.getElementById('prevImg2');
             const ph2 = document.getElementById('prevPlaceholder2');
-            
+
             if (rightData) {
                 img2.src = rightData.dataUrl;
                 img2.classList.remove('hidden');
@@ -545,18 +751,19 @@
                 });
 
                 const dateText = document.getElementById('dateInput').value;
-                const orderText = document.getElementById('orderInput').value;
-                
+                // Revert to just titles for main header
+                const orderText = songs.length > 0 ? songs.map(s => s.text).join(' > ') : '';
+
                 const pageWidth = 297;
                 const pageHeight = 210;
-                
+
                 // === 여백 설정 수정 (최상단 여백 줄이기) ===
                 const marginLeft = 10;
                 const marginTop = 5;  // 기존 10에서 5로 축소 (요청사항 반영)
                 const marginBottom = 10;
-                
+
                 const headerHeight = 15; // Header area height
-                
+
                 // Helper: Create Header Image via Canvas (to support Korean fonts)
                 const createHeaderImage = () => {
                     const canvas = document.createElement('canvas');
@@ -565,7 +772,7 @@
                     // Width is determined by Left/Right margins
                     const w = (pageWidth - marginLeft * 2) * 3.78 * scale; // mm to px
                     const h = headerHeight * 3.78 * scale;
-                    
+
                     canvas.width = w;
                     canvas.height = h;
 
@@ -579,7 +786,7 @@
                     // Vertical Line dividing Date and Order
                     const dateWidthPercent = 0.15; // 15% for Date
                     const lineX = w * dateWidthPercent;
-                    
+
                     ctx.beginPath();
                     ctx.moveTo(lineX, 0);
                     ctx.lineTo(lineX, h);
@@ -588,7 +795,7 @@
                     // Text Settings
                     ctx.textBaseline = 'middle';
                     ctx.fillStyle = '#000000';
-                    const fontSize = 14 * scale; 
+                    const fontSize = 14 * scale;
                     ctx.font = `${fontSize}px "Noto Sans KR", sans-serif`;
 
                     // Draw Date (Center aligned in its box)
@@ -617,15 +824,15 @@
                     const contentTop = marginTop + headerHeight + 2; // +2mm padding
                     const contentHeight = pageHeight - marginBottom - contentTop; // Use marginBottom
                     const centerX = pageWidth / 2;
-                    
+
                     doc.setLineWidth(0.1);
                     doc.setDrawColor(150); // Light gray line
                     doc.line(centerX, contentTop, centerX, pageHeight - marginBottom);
 
                     // 3. Draw Images
-                    const drawImage = (fileData, isLeft) => {
+                    const drawImage = (fileData, isLeft, songIndex) => {
                         const imgProps = doc.getImageProperties(fileData.dataUrl);
-                        
+
                         // Calculated slot size for one image
                         const slotWidth = (pageWidth - (marginLeft * 2)) / 2 - 2; // -2 for padding near divider
                         const slotHeight = contentHeight;
@@ -640,19 +847,36 @@
                         if (isLeft) {
                             // Left Slot center: margin + (slotWidth/2)
                             // Image start: Center - (finalW/2)
-                            const slotCenter = marginLeft + (slotWidth / 2); 
+                            const slotCenter = marginLeft + (slotWidth / 2);
                             xPos = slotCenter - (finalW / 2);
                         } else {
                             // Right Slot center: centerX + (slotWidth/2) + padding
                             const slotCenter = centerX + (slotWidth / 2) + 1;
                             xPos = slotCenter - (finalW / 2);
                         }
-                        
+
                         // Y Position centering
-                        const yPos = contentTop + (slotHeight - finalH) / 2;
+                        // Move image down slightly to make room for Form Text if needed
+                        const formTextHeight = 7;
+                        const yPos = contentTop + formTextHeight + (slotHeight - formTextHeight - finalH) / 2;
 
                         // OPTIMIZATION: Use 'JPEG' format and 'FAST' compression
                         doc.addImage(fileData.dataUrl, 'JPEG', xPos, yPos, finalW, finalH, null, 'FAST');
+
+                        // Draw Form Text
+                        const song = songs[songIndex];
+                        if (song && song.form) {
+                            doc.setFontSize(16);
+                            doc.setFont("helvetica", "bold");
+                            doc.setTextColor(0, 0, 0);
+
+                            // Left-align text in the slot
+                            // Left Page: marginLeft (+ padding)
+                            // Right Page: centerX + 1 divider (+ padding)
+                            const textCtxX = isLeft ? (marginLeft + 2) : (centerX + 3);
+                            // Draw a bit above the image or at the top of content area
+                            doc.text(`[${song.form}]`, textCtxX, contentTop + 5, { align: 'left' });
+                        }
                     };
 
                     // Left Image (Current index)
@@ -661,8 +885,8 @@
                     }
 
                     // Right Image (Next index)
-                    if (filesData[i+1]) {
-                        drawImage(filesData[i+1], false);
+                    if (filesData[i + 1]) {
+                        drawImage(filesData[i + 1], false);
                     }
                 }
 
@@ -682,4 +906,5 @@
         }
     </script>
 </body>
+
 </html>
