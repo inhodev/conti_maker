@@ -1,52 +1,55 @@
-# 🎵 예배 콘티 PDF 메이커 (Conti Maker)
+<div align="center">
 
-**예배 콘티(큐시트)와 악보를 손쉽게 PDF로 제작해주는 웹 도구입니다.**  
-복잡한 편집 프로그램 없이 브라우저에서 바로 악보를 업로드하고, 순서를 배치하고, 송폼(Song Form)을 지정하여 깔끔한 A4 가로형 PDF를 생성하세요.
+  <img src="https://via.placeholder.com/1200x400?text=Conti+Maker+Banner" alt="Conti Maker Banner" width="100%" />
 
-![Conti Maker Preview](https://via.placeholder.com/800x400?text=Conti+Maker+Preview)
-*(여기에 실제 스크린샷을 추가하면 더 좋습니다)*
+  # 🎵 예배 콘티 PDF 메이커 (Conti Maker)
+  
+  **복잡한 편집 없이, 브라우저에서 바로 만드는 나만의 예배 콘티**  
+  악보 업로드, 순서 배치, 송폼(Song Form) 지정까지 한 번에!
+
+  [주요 기능](#-주요-기능-key-features) • [기술 스택](#%EF%B8%8F-기술-스택-tech-stack) • [사용 방법](#-사용-방법-how-to-use)
+
+  <br>
+
+  <img src="https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white">
+  <img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white">
+  <img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black">
+  <img src="https://img.shields.io/badge/jsPDF-FF3E00?style=for-the-badge&logo=adobe&logoColor=white">
+
+</div>
+
+<br>
+
+## 📋 프로젝트 소개
+
+**Conti Maker**는 예배 준비를 돕기 위해 개발된 웹 도구입니다.  
+매주 반복되는 콘티 제작 과정에서 이미지 크기를 조절하거나 여백을 자르는 번거로움을 해결하고자 만들었습니다.  
+별도의 설치 없이 웹 브라우저만 있으면 언제 어디서든 깔끔한 A4 가로형 PDF 악보집을 생성할 수 있습니다.
+
+<br>
 
 ## ✨ 주요 기능 (Key Features)
 
-*   **📄 PDF 자동 생성**: A4 용지 가로 방향(Landscape)에 최적화된 PDF를 즉시 생성합니다.
-*   **🖼️ 이미지 자동 여백 제거**: 업로드한 악보 이미지의 불필요한 흰 여백을 자동으로 잘라내어, 악보가 더 크게 보이도록 최적화합니다.
-*   **📝 다이내믹 곡 목록 관리**:
-    *   곡 제목을 입력하여 리스트에 추가합니다.
-    *   드래그 앤 드롭으로 곡 순서를 자유롭게 변경할 수 있습니다.
-*   **musical_note 송폼(Song Form) 지정**:
-    *   각 곡마다 `Intro`, `Verse`, `Chorus`, `Bridge` 등의 구성을 버튼 클릭만으로 쉽게 지정할 수 있습니다.
-    *   지정된 송폼은 `[I-V-C]` 형태로 악보 상단에 표시됩니다.
-*   **👀 실시간 미리보기**: 날짜, 곡 순서, 송폼, 악보 배치가 PDF로 나오기 전 화면에서 실시간으로 확인 가능합니다.
-*   **👆 간편한 조작**: 드래그 앤 드롭 파일 업로드 및 SortableJS를 이용한 직관적인 순서 변경을 지원합니다.
+| 기능 | 설명 |
+| :--- | :--- |
+| **📄 PDF 자동 생성** | 악보 이미지를 A4 가로 방향에 맞춰 자동으로 최적화하여 배치합니다. |
+| **🖼️ 여백 자동 제거** | 악보 이미지의 불필요한 흰 여백을 자동으로 잘라내어 시인성을 높입니다. |
+| **📝 다이내믹 리스트** | 곡 순서를 드래그 앤 드롭으로 자유롭게 변경하고 추가/삭제할 수 있습니다. |
+| **🎵 송폼(Structure)** | `Intro`, `Verse` 등 송폼을 버튼으로 지정하여 악보 상단에 표시합니다. |
 
-## 🛠️ 기술 스택 (Tech Stack)
-
-*   **HTML5 / CSS3 (Tailwind CSS)**: 모던하고 깔끔한 UI 디자인
-*   **JavaScript (Vanilla)**: 별도 빌드 과정 없는 가벼운 구현
-*   **jsPDF**: 클라이언트 사이드 PDF 생성
-*   **SortableJS**: 드래그 앤 드롭 리스트 정렬
+<br>
 
 ## 🚀 사용 방법 (How to Use)
 
-1.  **예배 날짜 입력**: 상단 입력창에 예배 날짜를 적습니다. (파일 저장 시 이름으로 사용됩니다.)
-2.  **곡 추가 및 송폼 설정**:
-    *   `곡 제목 입력` 란에 제목을 쓰고 `+` 버튼을 누릅니다.
-    *   추가된 곡 아래의 **I(Intro), V(Verse), C(Chorus)** 등의 버튼을 눌러 송폼을 지정합니다.
-    *   곡 목록의 왼쪽 핸들(≡)을 잡아 드래그하여 순서를 바꿀 수 있습니다.
-3.  **악보 이미지 업로드**:
-    *   악보 이미지 파일들을 드래그하여 업로드 영역에 놓거나 클릭하여 선택합니다.
-    *   "여백 자동 제거" 옵션을 켜면 악보가 더 크게 들어가도록 자동 트리밍됩니다.
-4.  **PDF 다운로드**:
-    *   모든 설정이 끝나면 하단의 파란색 **PDF 다운로드** 버튼을 클릭합니다.
-    *   `날짜 콘티.pdf` 파일이 생성됩니다.
+1.  **예배 날짜 입력**: 파일명으로 사용될 날짜를 입력합니다.
+2.  **곡 목록 작성**: 곡 제목을 입력하고 송폼(I, V, C...)을 지정합니다.
+3.  **순서 조정**: 리스트의 핸들(≡)을 잡아 드래그하여 순서를 맞춥니다.
+4.  **이미지 업로드**: 준비된 악보 이미지들을 드래그 앤 드롭으로 올립니다.
+5.  **PDF 다운로드**: 파란색 버튼을 눌러 결과물을 저장합니다.
 
-## 📦 설치 및 실행 (Installation)
-
-이 프로젝트는 별도의 서버나 빌드 과정이 필요 없는 정적 웹페이지입니다.
-
-1.  이 저장소를 클론(Clone)하거나 다운로드합니다.
-2.  `index.html` 파일을 크롬(Chrome), 사파리(Safari) 등 웹 브라우저로 엽니다.
-3.  바로 사용 가능합니다!
+<br>
 
 ---
-Developed by [Your Name/Team Name]
+<div align="center">
+  Developed by <b>Inho Dev</b>
+</div>
